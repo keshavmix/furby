@@ -19,6 +19,11 @@ class State(Enum):
     SLEEPING = auto()
     SNORING = auto()
 
+class Mood(Enum):
+    HAPPY = auto()
+    SAD = auto()
+    ANGRY = auto()
+
 class Priority(Enum):
     GENERIC = 3
     TOUCH = 2
@@ -32,6 +37,7 @@ class Event:
 
 class FurbyFSM:
     def __init__(self):
+        self.event_counter = 0
         self.state = State.START
         self.event_q = queue.PriorityQueue()
 
@@ -39,9 +45,13 @@ class FurbyFSM:
         self.last_activity = time.time()
         self.running = True
 
-        # ===== NEW: Hunger System =====
-        self.hunger = 100            # 0–100
+        # ===== HUNGER SYSTEM =====
+        self.hunger = 100
         self.last_hunger_tick = time.time()
+
+        # ===== MOOD SYSTEM =====
+        self.mood = Mood.HAPPY      # Default mood
+        self.last_interaction = time.time()
 
         # Start main loop
         threading.Thread(target=self.main_loop, daemon=True).start()
@@ -55,7 +65,7 @@ class FurbyFSM:
         # Idle timeout watcher
         threading.Thread(target=self.idle_sleep_watch, daemon=True).start()
 
-        # NEW: Hunger watcher
+        # Hunger watcher
         threading.Thread(target=self.hunger_watch, daemon=True).start()
 
     # ---- Hardware/action stubs ----
@@ -67,8 +77,13 @@ class FurbyFSM:
         time.sleep(d)
 
     # ---- Utility ----
+    #def post(self, ev):
+    #    self.event_q.put((ev.priority, time.time(), ev))
+
     def post(self, ev):
-        self.event_q.put((ev.priority, time.time(), ev))
+        self.event_counter += 1
+        self.event_q.put((ev.priority, self.event_counter, ev))
+    
 
     def lock_for(self, sec):
         self.locked_until = time.time() + sec
@@ -90,28 +105,21 @@ class FurbyFSM:
             if self.state == State.IDLE:
                 if time.time() - self.last_activity > IDLE_TIMEOUT:
                     self.post(Event(Priority.GENERIC.value, "idle_timeout"))
-            time.sleep(1)
+            time.sleep(5)
 
-    # ===== NEW: Hunger system watcher =====
+    # ===== HUNGER WATCHER =====
     def hunger_watch(self):
         while self.running:
-            # NEW: hunger disabled while sleeping
             if self.state == State.SLEEPING:
-                time.sleep(2)
+                time.sleep(5)
                 continue
 
-            if time.time() - self.last_hunger_tick > 60:  # Lower every minute
+            if time.time() - self.last_hunger_tick > 60:  # Every 1 min
                 self.hunger = max(0, self.hunger - 10)
                 self.last_hunger_tick = time.time()
                 print(f"[HUNGER] level = {self.hunger}")
 
-                if self.hunger < 20:
-                    self.post(Event(Priority.GENERIC.value, "starving"))
-                elif self.hunger < 40:
-                    self.post(Event(Priority.GENERIC.value, "hungry"))
-
-            time.sleep(2)
-
+            time.sleep(5)
 
     # ---- MAIN LOOP ----
     def main_loop(self):
@@ -131,6 +139,13 @@ class FurbyFSM:
             else:
                 print(f"[WARN] no handler for {ev.name}")
 
+    # ---- MOOD SETTERS ----
+    def set_mood(self, mood):
+        if mood != self.mood:
+            print(f"[MOOD] {self.mood.name} → {mood.name}")
+        self.mood = mood
+        self.last_interaction = time.time()
+
     # ---- HANDLERS ----
     def on_start(self, payload):
         print("[FSM] START → WAKEUP")
@@ -144,7 +159,6 @@ class FurbyFSM:
             self.state = State.IDLE
             self.last_activity = time.time()
             print("[FSM] WAKEUP → IDLE")
-            #resume hunger system
             print("[HUNGER] resumed")
         threading.Thread(target=finish, daemon=True).start()
 
@@ -155,20 +169,43 @@ class FurbyFSM:
         self.lock_for(SNORE_LOCK)
         self.play("snore")
         self.anim("snore", SNORE_LOCK)
-        
+
         def finishSnoring():
             self.state = State.SLEEPING
             print("[FSM] Snoring -> Sleeping")
         threading.Thread(target=finishSnoring, daemon=True).start()
-                        
+
+    # ===== RANDOM BEHAVIOR WITH MOOD =====
     def on_random(self, payload):
         if self.state != State.IDLE:
             return
-        choices = ["look", "think", "whistle", "laugh", "blink"]
-        c = random.choice(choices)
-        print(f"[RANDOM] {c}")
+
+        # Hunger overrides mood
+        if self.hunger < 20:
+            action = random.choice(["cry", "weak", "sick", "cough", "vomit", "sneeze"])
+            print(f"[STARVING ACTION] {action}")
+            self.play(action)
+            self.anim(action, 3)
+            return
+
+        elif self.hunger < 40:
+            action = random.choice(["whine", "ask_food", "hungry"])
+            print(f"[HUNGRY ACTION] {action}")
+            self.play(action)
+            self.anim(action, 3)
+            return
+
+        # Mood-based behaviors
+        mood_actions = {
+            Mood.HAPPY: ["look", "whistle", "laugh", "spin"],
+            Mood.SAD: ["sigh", "slow_blink"],
+            Mood.ANGRY: ["grr", "shake_head"],
+        }
+
+        c = random.choice(mood_actions[self.mood])
+        #print(f"[RANDOM] ({self.mood.name}) → {c}")
         self.play(c)
-        self.anim(c, 1)
+        self.anim(c, 3)
 
     def on_wake(self, payload):
         if self.state == State.SLEEPING:
@@ -177,72 +214,71 @@ class FurbyFSM:
         else:
             print("[INFO] Already awake")
 
-
+    # ===== MOOD-DRIVEN TOUCH EVENTS =====
     def on_touch_head(self, payload):
         print("[EVENT] head touch")
+        self.set_mood(Mood.HAPPY)
+
         if self.state == State.SLEEPING:
             self.on_wake({})
             return
-        if self.state ==  State.IDLE:
+
+        if self.state == State.IDLE:
             self.last_activity = time.time()
             self.play("purr")
             self.anim("purr", 1)
 
     def on_touch_belly(self, payload):
         print("[EVENT] belly touch")
+        self.set_mood(Mood.HAPPY)
+
         if self.state == State.SLEEPING:
             self.on_wake({})
             return
-        if self.state ==  State.IDLE:    
+
+        if self.state == State.IDLE:
             self.last_activity = time.time()
             self.play("giggle")
             self.anim("giggle", 1)
 
-    # ===== UPDATED: FEED SYSTEM (restores hunger) =====
     def on_feed(self, payload):
         print("[EVENT] feeding")
+
+        self.hunger = min(100, self.hunger + 40)
         print(f"[HUNGER] restored → {self.hunger}")
 
         if self.state == State.IDLE:
-            self.hunger = min(100, self.hunger + 40)
             self.last_activity = time.time()
             self.play("eat")
             self.anim("eat", 2)
 
     def on_tilt(self, payload):
         print("[EVENT] tilt")
+        self.set_mood(Mood.SAD)
+
         if self.state == State.SLEEPING:
             self.on_wake({})
             return
-        if self.state == State.IDLE:    
+
+        if self.state == State.IDLE:
             self.play("tilt")
             self.anim("tilt", 1)
             self.last_activity = time.time()
 
     def on_shake(self, payload):
         print("[EVENT] shake")
+        self.set_mood(Mood.ANGRY)
+
         if self.state == State.SLEEPING:
             self.on_wake({})
             return
-        if self.state == State.IDLE:    
+
+        if self.state == State.IDLE:
             self.play("shake")
             self.anim("shake", 1)
             self.last_activity = time.time()
 
-    # ===== NEW: Hungry & starving animations =====
-    def on_hungry(self, payload):
-        if self.state == State.IDLE:
-            print("[HUNGER] Hungry")
-            self.play("hungry")
-            self.anim("hungry", 1)
-
-    def on_starving(self, payload):
-        if self.state == State.IDLE:
-            print("[HUNGER] STARVING! Feed me!")
-            self.play("cry")
-            self.anim("cry", 2)
-
-    # ===== NEW: DANCE MODE =====
+    # ===== DANCE MODE =====
     def on_dance(self, payload):
         print("[EVENT] dance mode!")
         self.state = State.IDLE
