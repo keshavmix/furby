@@ -10,6 +10,7 @@ WAKEUP_LOCK = 5
 IDLE_RANDOM_BEHAVIOR_AFTER = 5
 IDLE_TIMEOUT = 30
 SNORE_LOCK = 5
+LISTENING_LOCK = 5
 # ==================
 
 class State(Enum):
@@ -18,6 +19,7 @@ class State(Enum):
     IDLE = auto()
     SLEEPING = auto()
     SNORING = auto()
+    LISTENING = auto()
 
 class Mood(Enum):
     HAPPY = auto()
@@ -28,6 +30,7 @@ class Priority(Enum):
     GENERIC = 3
     TOUCH = 2
     FEED = 1
+    WAKEWORD = 0
 
 class Event:
     def __init__(self, priority, name, payload=None):
@@ -67,6 +70,9 @@ class FurbyFSM:
 
         # Hunger watcher
         threading.Thread(target=self.hunger_watch, daemon=True).start()
+        
+        #wake word listener
+        threading.Thread(target=self.wakeword_listener, daemon=True).start()
 
     # ---- Hardware/action stubs ----
     def play(self, sound):
@@ -120,6 +126,42 @@ class FurbyFSM:
                 print(f"[HUNGER] level = {self.hunger}")
 
             time.sleep(5)
+
+    def wakeword_listener(self):
+        while self.running:
+            # Wake word allowed ONLY in IDLE state
+            if self.state == State.IDLE:
+                detected = self.detect_wakeword()
+                if detected:
+                    print("[WAKEWORD] wake word detected! Listening for command.")
+                    #self.state = State.LISTENING
+                    self.post(Event(Priority.WAKEWORD.value, "wakeword"))
+                    time.sleep(1)  # prevent spamming
+            else:
+                time.sleep(0.5)
+
+    def on_wakeword(self, payload):
+        if self.state == State.IDLE:
+            print("[FSM] IDLE → LISTENING")
+            self.state = State.LISTENING
+            self.lock_for(LISTENING_LOCK)
+            self.play("listening")
+            self.anim("listening", LISTENING_LOCK)
+            
+            def finished_listening():
+                time.sleep(LISTENING_LOCK)
+                self.state = State.IDLE
+                self.last_activity = time.time()
+                print("[FSM] LISTENING → IDLE")
+            threading.Thread(target=finished_listening, daemon=True).start()
+        else: 
+            print(f"Cannot listen in {self.state} state.")
+
+    def detect_wakeword(self):
+        # TODO: connect real wake-word engine here
+        # For testing, we simulate random detection:
+        return False
+
 
     # ---- MAIN LOOP ----
     def main_loop(self):
@@ -303,7 +345,7 @@ def event_feed(): fsm.post(Event(Priority.FEED.value, "feed"))
 def event_tilt(): fsm.post(Event(Priority.TOUCH.value, "tilt"))
 def event_shshake(): fsm.post(Event(Priority.TOUCH.value, "shake"))
 def event_dance(): fsm.post(Event(Priority.TOUCH.value, "dance"))
-
+def event_wakeword(): fsm.post(Event(Priority.WAKEWORD.value, "wakeword"))
 # ============================
 # CONSOLE INPUT LOOP
 # ============================
@@ -318,6 +360,7 @@ def console_loop():
         elif cmd == "tilt": event_tilt()
         elif cmd == "shake": event_shshake()
         elif cmd == "dance": event_dance()
+        elif cmd == "wakeword": event_wakeword()
         elif cmd == "exit": break
         else:
             print("Commands: wake, head, belly, feed, tilt, shake, dance")
