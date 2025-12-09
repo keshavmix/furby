@@ -268,7 +268,7 @@ class FurbyFSM:
         if self.state == State.IDLE:
             self.last_activity = time.time()
             self.play("purr")
-            self.anim("purr", 1)
+            self.anim("purr", 3)
 
     def on_touch_belly(self, payload):
         print("[EVENT] belly touch")
