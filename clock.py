@@ -90,13 +90,4 @@ def speak_time():
 
 if __name__ == "__main__":
     print("Talking Clock (PyAudio) Started")
-    last_minute = -1
-
-    while True:
-        now = datetime.datetime.now()
-
-        if now.minute != last_minute:
-            speak_time()
-            last_minute = now.minute
-
-        time.sleep(1)
+    speak_time()
