@@ -2,8 +2,8 @@ import os
 from pydub import AudioSegment, silence
 
 # ------------ SETTINGS -------------
-INPUT_FOLDER = "sounds/clock/intro"      # folder containing wav files
-OUTPUT_FOLDER = "sounds/clock/intro/clean_wav/"    # folder for trimmed files
+INPUT_FOLDER = "sounds/temp/"      # folder containing wav files
+OUTPUT_FOLDER = "sounds/temp/clean/"    # folder for trimmed files
 SILENCE_THRESHOLD = -40        # dB, adjust if needed
 CHUNK_SIZE = 10                # ms
 # -----------------------------------
