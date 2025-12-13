@@ -2,6 +2,7 @@
 import time
 import threading
 import queue
+import json
 import os, random
 from enum import Enum, auto
 SOUND_FOLDER = "sounds/"
@@ -176,12 +177,12 @@ class FurbyFSM:
                 if detected:
                     print("[WAKEWORD] wake word detected! Listening for command.")
                     #self.state = State.LISTENING
-                    self.post(Event(Priority.WAKEWORD.value, "wakeword"))
+                    self.post(Event(Priority.WAKEWORD.value, "listening"))
                     time.sleep(1)  # prevent spamming
             else:
                 time.sleep(0.5)
 
-    def on_wakeword(self, payload):
+    def on_listening(self, payload):
         if self.state == State.IDLE:
             print("[FSM] IDLE → LISTENING")
             self.state = State.LISTENING
@@ -189,20 +190,269 @@ class FurbyFSM:
             self.play("listening")
             self.anim("listening", LISTENING_LOCK)
             
-            def finished_listening():
+            def on_listening_completed():
                 time.sleep(LISTENING_LOCK)
-                self.state = State.IDLE
+                self.state = State.BUSY
                 self.last_activity = time.time()
-                print("[FSM] LISTENING → IDLE")
-            threading.Thread(target=finished_listening, daemon=True).start()
+                print("[FSM] LISTENING → BUSY")
+                
+                data = {
+                        "intent": "SINGASONG",
+                        "slots": {
+                            "song": "golden"
+                            }
+                        }
+                process_command(self, data)
+            threading.Thread(target=on_listening_completed, daemon=True).start()
         else: 
             print(f"Cannot listen in {self.state} state.")
 
     def detect_wakeword(self):
         # TODO: connect real wake-word engine here
         # For testing, we simulate random detection:
-        return False
+        return True
 
+    def process_command(self, data):
+        intent =  data["intent"]
+        match intent:
+            case "SINGASONG":
+                on_singasong(data["slots"]["song"])
+
+            case "GOTOSLEEP":
+                on_gotosleep()
+
+            case "WAKEUP":
+                on_wakeup()
+
+            case "TELLAJOKE":
+                on_tellajoke()
+
+            case "TELLASTORY":
+                on_tellastory()
+
+            case "TELLTIME":
+                on_telltime()
+
+            case "TELLDATE":
+                on_telldate()
+
+            case "PLAYGAME":
+                on_playgame()
+
+            case "SINGRHYME":
+                on_singrhyme()
+
+            case "DANCE":
+                on_dance()
+
+            case "ILOVEYOU":
+                on_iloveyou()
+
+            case "IHATEYOU":
+                on_ihateyou()
+
+            case "WHATISYOURNAME":
+                on_what_is_your_name()
+
+            case "WHOAREYOU":
+                on_who_are_you()
+
+            case "HOWAREYOU":
+                on_how_are_you()
+
+            case "COUNT":
+                on_count(number)      # number comes from slot $pv.TwoDigitInteger
+
+            case "SAYABC":
+                on_sayabc()
+
+            case "TEACHME":
+                on_teachme()
+
+            case "MOUTH":
+                on_mouth(mouthState)
+
+            case "TELLANUMBER":
+                on_tell_a_number()
+
+            case "AREYOUHUNGRY":
+                on_are_you_hungry()
+
+            case "MOVEEARS":
+                on_move_ears()
+
+            case "EYES":
+                on_eyes(eyeState)
+
+            case "LOOK":
+                on_look(lookState)
+
+            case "HEYFURBY":
+                on_hey_furby()
+
+            case "BYE":
+                on_bye()
+
+            case "GREETING":
+                on_greeting(greetingState)
+
+            case "ALARM":
+                on_alarm(hour, minute, ampm)  # slots: hour, minute, ampm
+
+            case "PLAYMUSIC":
+                on_playmusic()
+
+            case "TELLAGE":
+                on_tell_age()
+
+            case "OK":
+                on_ok()
+
+            case "YES":
+                on_yes()
+
+            case "NO":
+                on_no()
+
+            case "CANCEL":
+                on_cancel()
+
+            case "REMOVEALARM":
+                on_remove_alarm(alarm)   # alarm = SingleDigitInteger
+
+            case "TELLALARM":
+                on_tell_alarm()
+
+            case "FRIEND":
+                on_friend()
+
+            case _:
+                on_unknown_intent(intent)
+
+    # ============ INTENT HANDLERS ============
+
+    def on_singasong(song):
+        print(f"[INTENT] Sing a song: {song}")
+        self.state = State.BUSY
+        self.play(song)
+        self.anim(song, WAKEUP_LOCK)
+        def finish():
+            self.state = State.IDLE
+            self.last_activity = time.time()
+            print("[FSM] BUSY → IDLE")
+        threading.Thread(target=finish, daemon=True).start()
+
+    def on_gotosleep():
+        print("[INTENT] Go to sleep")
+
+    def on_wakeup():
+        print("[INTENT] Wake up")
+
+    def on_tellajoke():
+        print("[INTENT] Tell a joke")
+
+    def on_tellastory():
+        print("[INTENT] Tell a story")
+
+    def on_telltime():
+        print("[INTENT] Tell the time")
+
+    def on_telldate():
+        print("[INTENT] Tell the date")
+
+    def on_playgame():
+        print("[INTENT] Play a game")
+
+    def on_singrhyme():
+        print("[INTENT] Sing a rhyme / poem")
+
+    def on_dance():
+        print("[INTENT] Dance")
+
+    def on_iloveyou():
+        print("[INTENT] I love you")
+
+    def on_ihateyou():
+        print("[INTENT] I hate you")
+
+    def on_what_is_your_name():
+        print("[INTENT] What is your name")
+
+    def on_who_are_you():
+        print("[INTENT] Who are you")
+
+    def on_how_are_you():
+        print("[INTENT] How are you")
+
+    def on_count(number):
+        print(f"[INTENT] Count to {number}")
+
+    def on_sayabc():
+        print("[INTENT] Say ABC")
+
+    def on_teachme():
+        print("[INTENT] Teach me something")
+
+    def on_mouth(mouthState):
+        print(f"[INTENT] Mouth control: {mouthState}")
+
+    def on_tell_a_number():
+        print("[INTENT] Tell a number")
+
+    def on_are_you_hungry():
+        print("[INTENT] Are you hungry?")
+
+    def on_move_ears():
+        print("[INTENT] Move ears")
+
+    def on_eyes(eyeState):
+        print(f"[INTENT] Eyes: {eyeState}")
+
+    def on_look(lookState):
+        print(f"[INTENT] Look: {lookState}")
+
+    def on_hey_furby():
+        print("[INTENT] Hey Furby")
+
+    def on_bye():
+        print("[INTENT] Bye")
+
+    def on_greeting(greetingState):
+        print(f"[INTENT] Greeting: {greetingState}")
+
+    def on_alarm(hour, minute, ampm):
+        print(f"[INTENT] Alarm set for {hour}:{minute} {ampm}")
+
+    def on_playmusic():
+        print("[INTENT] Play music")
+
+    def on_tell_age():
+        print("[INTENT] Tell age")
+
+    def on_ok():
+        print("[INTENT] OK")
+
+    def on_yes():
+        print("[INTENT] YES")
+
+    def on_no():
+        print("[INTENT] NO")
+
+    def on_cancel():
+        print("[INTENT] CANCEL")
+
+    def on_remove_alarm(alarm):
+        print(f"[INTENT] Remove alarm {alarm}")
+
+    def on_tell_alarm():
+        print("[INTENT] Tell all alarms")
+
+    def on_friend():
+        print("[INTENT] Friend request")
+
+    def on_unknown_intent(intent):
+        print(f"[ERROR] Unknown intent: {intent}")
+    
 
     # ---- MAIN LOOP ----
     def main_loop(self):
@@ -238,9 +488,9 @@ class FurbyFSM:
         self.anim("yawn", WAKEUP_LOCK)
         
         #Play greetings
-        greeting = get_time_greeting()
-        self.play(greeting)
-        self.anim(greeting, NORMAL_LOCK)
+        action = get_time_greeting()
+        self.play(action)
+        self.anim(action, NORMAL_LOCK)
 
         def finish():
             time.sleep(WAKEUP_LOCK)
@@ -254,9 +504,9 @@ class FurbyFSM:
         print("[FSM] Idle -> Snoring")
         self.state = State.SNORING
         self.lock_for(SNORE_LOCK)
-        snoring = random.choice(SOUND_SNORING)
-        self.play(snoring)
-        self.anim(snoring, SNORE_LOCK)
+        action = random.choice(SOUND_SNORING)
+        self.play(action)
+        self.anim(action, SNORE_LOCK)
 
         def finishSnoring():
             self.state = State.SLEEPING
@@ -391,7 +641,7 @@ def event_feed(): fsm.post(Event(Priority.FEED.value, "feed"))
 def event_tilt(): fsm.post(Event(Priority.TOUCH.value, "tilt"))
 def event_shshake(): fsm.post(Event(Priority.TOUCH.value, "shake"))
 def event_dance(): fsm.post(Event(Priority.TOUCH.value, "dance"))
-def event_wakeword(): fsm.post(Event(Priority.WAKEWORD.value, "wakeword"))
+def event_wakeword(): fsm.post(Event(Priority.WAKEWORD.value, "listening"))
 # ============================
 # CONSOLE INPUT LOOP
 # ============================

@@ -1,0 +1,165 @@
+context:
+  expressions:
+    SINGASONG:
+      - sing $SONG:song
+    GOTOSLEEP:
+      - Bed time
+      - Go to sleep
+    WAKEUP:
+      - Wake up
+    TELLAJOKE:
+      - Tell a joke
+    TELLASTORY:
+      - Tell a story
+    TELLTIME:
+      - current time
+      - whats the time
+      - What is the time
+      - Tell the time
+    TELLDATE:
+      - todays date
+      - current date
+      - whats the date
+      - what is the date
+      - tell the date
+    PLAYGAME:
+      - Play (a) game
+      - Lets play (a game)
+      - (Do) you want to play (game)
+    SINGRHYME:
+      - Sing a [rhyme, poem]
+    DANCE:
+      - please dance
+      - can you please dance
+      - dance with me
+      - Lets Dance
+    ILOVEYOU:
+      - Love you
+      - I love you
+    IHATEYOU:
+      - get lost
+      - i hate you
+      - hate you
+    WHATISYOURNAME:
+      - whats your name
+      - your name
+      - What is your name
+    WHOAREYOU:
+      - Introduce yourself
+      - Who are you
+    HOWAREYOU:
+      - How are you (doing)
+    COUNT:
+      - count $pv.TwoDigitInteger:number
+      - Count
+    SAYABC:
+      - tell abc
+      - sing abc
+      - say abc
+    TEACHME:
+      - Teach me (something)
+    MOUTH:
+      - mouth $MOUTH_STATE:mouthState
+      - $MOUTH_STATE:mouthState your mouth
+    TELLANUMBER:
+      - tell a number
+      - Tell me a number
+    AREYOUHUNGRY:
+      - (do) you want food
+      - you want to eat something
+      - (are) you hungry
+    MOVEEARS:
+      - Move (your) ears
+    EYES:
+      - $EYE_STATE:eyeState your eyes
+    LOOK:
+      - look $LOOK_STATE:lookState
+    HEYFURBY:
+      - (hey, hello, hi) Furby
+    BYE:
+      - see you later
+      - tata
+      - (bye) bye
+      - (good) bye
+    GREETING:
+      - good $GREETING_STATE:greetingState
+    ALARM:
+      - wake up at $pv.TwoDigitInteger:hour ($pv.TwoDigitInteger:minute) in the
+        ($GREETING_STATE:ampm)
+      - alarm at $pv.TwoDigitInteger:hour ($pv.TwoDigitInteger:minute)
+        ($ALARM_AMPM:ampm)
+      - set a $pv.TwoDigitInteger:hour ($pv.TwoDigitInteger:minute)
+        ($ALARM_AMPM:ampm) alarm
+      - wake me up at $pv.TwoDigitInteger:hour ($pv.TwoDigitInteger:minute)
+        ($ALARM_AMPM:ampm)
+      - set an alarm for $pv.TwoDigitInteger:hour ($pv.TwoDigitInteger:minute)
+        ($ALARM_AMPM:ampm)
+    PLAYMUSIC:
+      - play (some) music
+    TELLAGE:
+      - (tell) your age
+      - (whats, what is) your age
+      - how old are you
+    OK:
+      - done
+      - okay
+      - fine
+      - ok
+    YES:
+      - yep
+      - ya
+      - yes
+    NO:
+      - nope
+      - na
+      - no
+    CANCEL:
+      - cancel
+    REMOVEALARM:
+      - (remove, delete, cancel) all alarms
+      - (remove, delete, cancel) alarm $pv.SingleDigitInteger:alarm
+    TELLALARM:
+      - tell all alarms
+      - alarm list
+    FRIEND:
+      - Can we be friends
+      - Can I be your (friend, buddy)
+      - Will you be my (buddy, friend)
+      - Do you (wanna, want to) be my friend
+      - are you my friend
+      - would you like to be my (friend, buddy)
+      - (want to, wanna) be my (friend, buddy)
+  slots:
+    EYE_STATE:
+      - blink
+      - move
+      - close
+      - open
+    MOUTH_STATE:
+      - close
+      - open
+    LOOK_STATE:
+      - around
+      - RIGHT
+      - LEFT
+      - DOWN
+      - UP
+    GREETING_STATE:
+      - night
+      - evening
+      - afternoon
+      - morning
+    ALARM_AMPM:
+      - PM
+      - AM
+    SONG:
+      - soda pop
+      - free
+      - apt
+      - how is done
+      - your idol
+      - beat it
+      - whats sound like
+      - what is sound like
+      - golden
+  macros: {}
