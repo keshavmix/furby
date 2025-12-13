@@ -2,8 +2,47 @@
 import time
 import threading
 import queue
-import random
+import os, random
 from enum import Enum, auto
+SOUND_FOLDER = "sounds/"
+
+def get_sound_list(prefix):
+    return [
+        f.replace(".wav", "")
+        for f in os.listdir(SOUND_FOLDER)
+        if f.startswith(prefix) and f.endswith(".wav")
+    ]
+    
+# Initialize audio files data.
+SOUND_SNEEZE = get_sound_list("sneeze")
+SOUND_COUGH = get_sound_list("cough")
+SOUND_SICK = get_sound_list("sick")
+
+SOUND_SNORING = get_sound_list("snoring")
+SOUND_LOVE = get_sound_list("love_reply")
+SOUND_LAUGH = get_sound_list("laugh")
+SOUND_HUNGRY = get_sound_list("hungry")
+SOUND_HOWAREYOU = get_sound_list("howareyou_reply")
+SOUND_HATE_REPLY = get_sound_list("hate_reply")
+SOUND_BYE = get_sound_list("bye")
+SOUND_GREETING_MORNING = get_sound_list("greeting_morning")
+SOUND_GREETING_AFTERNOON = get_sound_list("greeting_afternoon")
+SOUND_GREETING_EVENING = get_sound_list("greeting_evening")
+SOUND_GREETING_NIGHT = get_sound_list("greeting_night")
+SOUND_RANDOM = get_sound_list("random")
+
+def get_time_greeting():
+    hour = time.localtime().tm_hour
+
+    if 5 <= hour < 12:
+        return random.choice(SOUND_GREETING_MORNING)
+    elif 12 <= hour < 17:
+        return random.choice(SOUND_GREETING_AFTERNOON)
+    elif 17 <= hour < 21:
+        return random.choice(SOUND_GREETING_EVENING)
+    else:
+        return random.choice(SOUND_GREETING_NIGHT)
+
 
 # ===== CONFIG =====
 WAKEUP_LOCK = 5
@@ -11,6 +50,7 @@ IDLE_RANDOM_BEHAVIOR_AFTER = 5
 IDLE_TIMEOUT = 30
 SNORE_LOCK = 5
 LISTENING_LOCK = 5
+NORMAL_LOCK = 5
 # ==================
 
 class State(Enum):
@@ -20,6 +60,7 @@ class State(Enum):
     SLEEPING = auto()
     SNORING = auto()
     LISTENING = auto()
+    BUSY = auto()
 
 class Mood(Enum):
     HAPPY = auto()
@@ -82,7 +123,7 @@ class FurbyFSM:
         print(f"[ANIM] {name} ({d}s)")
         time.sleep(d)
 
-    # ---- Utility ----
+    # ---- Utility ----   
     #def post(self, ev):
     #    self.event_q.put((ev.priority, time.time(), ev))
 
@@ -195,6 +236,11 @@ class FurbyFSM:
         self.lock_for(WAKEUP_LOCK)
         self.play("yawn")
         self.anim("yawn", WAKEUP_LOCK)
+        
+        #Play greetings
+        greeting = get_time_greeting()
+        self.play(greeting)
+        self.anim(greeting, NORMAL_LOCK)
 
         def finish():
             time.sleep(WAKEUP_LOCK)
@@ -206,11 +252,11 @@ class FurbyFSM:
 
     def on_idle_timeout(self, payload):
         print("[FSM] Idle -> Snoring")
-        print("[HUNGER] paused during sleep")
         self.state = State.SNORING
         self.lock_for(SNORE_LOCK)
-        self.play("snore")
-        self.anim("snore", SNORE_LOCK)
+        snoring = random.choice(SOUND_SNORING)
+        self.play(snoring)
+        self.anim(snoring, SNORE_LOCK)
 
         def finishSnoring():
             self.state = State.SLEEPING
@@ -224,14 +270,14 @@ class FurbyFSM:
 
         # Hunger overrides mood
         if self.hunger < 20:
-            action = random.choice(["cry", "weak", "sick", "cough", "vomit", "sneeze"])
+            action = random.choice(SOUND_SNEEZE + SOUND_COUGH + SOUND_SICK)
             print(f"[STARVING ACTION] {action}")
             self.play(action)
             self.anim(action, 3)
             return
 
         elif self.hunger < 40:
-            action = random.choice(["whine", "ask_food", "hungry"])
+            action = random.choice(SOUND_HUNGRY)
             print(f"[HUNGRY ACTION] {action}")
             self.play(action)
             self.anim(action, 3)
@@ -239,7 +285,7 @@ class FurbyFSM:
 
         # Mood-based behaviors
         mood_actions = {
-            Mood.HAPPY: ["look", "whistle", "laugh", "spin"],
+            Mood.HAPPY: SOUND_RANDOM,
             Mood.SAD: ["sigh", "slow_blink"],
             Mood.ANGRY: ["grr", "shake_head"],
         }
