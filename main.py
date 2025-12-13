@@ -8,11 +8,15 @@ from enum import Enum, auto
 SOUND_FOLDER = "sounds/"
 
 def get_sound_list(prefix):
-    return [
-        f.replace(".wav", "")
-        for f in os.listdir(SOUND_FOLDER)
-        if f.startswith(prefix) and f.endswith(".wav")
-    ]
+    if not os.path.exists(SOUND_FOLDER):
+        print("Missing sound folder!")
+        return []
+    else 
+        return [
+            f.replace(".wav", "")
+            for f in os.listdir(SOUND_FOLDER)
+            if f.startswith(prefix) and f.endswith(".wav")
+        ]
     
 # Initialize audio files data.
 SOUND_SNEEZE = get_sound_list("sneeze")
@@ -191,7 +195,6 @@ class FurbyFSM:
             self.anim("listening", LISTENING_LOCK)
             
             def on_listening_completed():
-                time.sleep(LISTENING_LOCK)
                 self.state = State.BUSY
                 self.last_activity = time.time()
                 print("[FSM] LISTENING → BUSY")
@@ -202,7 +205,7 @@ class FurbyFSM:
                             "song": "golden"
                             }
                         }
-                process_command(self, data)
+                self.process_command(data)
             threading.Thread(target=on_listening_completed, daemon=True).start()
         else: 
             print(f"Cannot listen in {self.state} state.")
@@ -214,243 +217,250 @@ class FurbyFSM:
 
     def process_command(self, data):
         intent =  data["intent"]
+        slots = data.get("slots", {})
+
         match intent:
             case "SINGASONG":
-                on_singasong(data["slots"]["song"])
+                self.on_singasong(slots.get("song"))
 
             case "GOTOSLEEP":
-                on_gotosleep()
+                self.on_gotosleep()
 
             case "WAKEUP":
-                on_wakeup()
+                self.on_wakeup()
 
             case "TELLAJOKE":
-                on_tellajoke()
+                self.on_tellajoke()
 
             case "TELLASTORY":
-                on_tellastory()
+                self.on_tellastory()
 
             case "TELLTIME":
-                on_telltime()
+                self.on_telltime()
 
             case "TELLDATE":
-                on_telldate()
+                self.on_telldate()
 
             case "PLAYGAME":
-                on_playgame()
+                self.on_playgame()
 
             case "SINGRHYME":
-                on_singrhyme()
+                self.on_singrhyme()
 
             case "DANCE":
-                on_dance()
+                self.on_dance()
 
             case "ILOVEYOU":
-                on_iloveyou()
+                self.on_iloveyou()
 
             case "IHATEYOU":
-                on_ihateyou()
+                self.on_ihateyou()
 
             case "WHATISYOURNAME":
-                on_what_is_your_name()
+                self.on_what_is_your_name()
 
             case "WHOAREYOU":
-                on_who_are_you()
+                self.on_who_are_you()
 
             case "HOWAREYOU":
-                on_how_are_you()
+                self.on_how_are_you()
 
             case "COUNT":
-                on_count(number)      # number comes from slot $pv.TwoDigitInteger
+                self.on_count(slots.get("number"))      # number comes from slot $pv.TwoDigitInteger
 
             case "SAYABC":
-                on_sayabc()
+                self.on_sayabc()
 
             case "TEACHME":
-                on_teachme()
+                self.on_teachme()
 
             case "MOUTH":
-                on_mouth(mouthState)
+                self.on_mouth(slots.get("mouthState"))
 
             case "TELLANUMBER":
-                on_tell_a_number()
+                self.on_tell_a_number()
 
             case "AREYOUHUNGRY":
-                on_are_you_hungry()
+                self.on_are_you_hungry()
 
             case "MOVEEARS":
-                on_move_ears()
+                self.on_move_ears()
 
             case "EYES":
-                on_eyes(eyeState)
+                self.on_eyes(slots.get("eyeState"))
 
             case "LOOK":
-                on_look(lookState)
+                self.on_look(slots.get("lookState"))
 
             case "HEYFURBY":
-                on_hey_furby()
+                self.on_hey_furby()
 
             case "BYE":
-                on_bye()
+                self.on_bye()
 
             case "GREETING":
-                on_greeting(greetingState)
+                self.on_greeting(slots.get("greetingState"))
 
             case "ALARM":
-                on_alarm(hour, minute, ampm)  # slots: hour, minute, ampm
+                hour = slots.get("hour")
+                minute = slots.get("minute")
+                ampm = slots.get("ampm")
+                self.on_alarm(hour, minute, ampm)  # slots: hour, minute, ampm
 
             case "PLAYMUSIC":
-                on_playmusic()
+                self.on_playmusic()
 
             case "TELLAGE":
-                on_tell_age()
+                self.on_tell_age()
 
             case "OK":
-                on_ok()
+                self.on_ok()
 
             case "YES":
-                on_yes()
+                self.on_yes()
 
             case "NO":
-                on_no()
+                self.on_no()
 
             case "CANCEL":
-                on_cancel()
+                self.on_cancel()
 
             case "REMOVEALARM":
-                on_remove_alarm(alarm)   # alarm = SingleDigitInteger
+                alarm = slots.get("alarm")
+                self.on_remove_alarm(alarm)   # alarm = SingleDigitInteger
 
             case "TELLALARM":
-                on_tell_alarm()
+                self.on_tell_alarm()
 
             case "FRIEND":
-                on_friend()
+                self.on_friend()
 
             case _:
-                on_unknown_intent(intent)
+                self.on_unknown_intent(intent)
 
     # ============ INTENT HANDLERS ============
 
-    def on_singasong(song):
+    def on_singasong(self, song):
         print(f"[INTENT] Sing a song: {song}")
         self.state = State.BUSY
         self.play(song)
         self.anim(song, WAKEUP_LOCK)
+        
         def finish():
             self.state = State.IDLE
             self.last_activity = time.time()
             print("[FSM] BUSY → IDLE")
         threading.Thread(target=finish, daemon=True).start()
 
-    def on_gotosleep():
+    def on_gotosleep(self):
         print("[INTENT] Go to sleep")
 
-    def on_wakeup():
+    def on_wakeup(self):
         print("[INTENT] Wake up")
 
-    def on_tellajoke():
+    def on_tellajoke(self):
         print("[INTENT] Tell a joke")
 
-    def on_tellastory():
+    def on_tellastory(self):
         print("[INTENT] Tell a story")
 
-    def on_telltime():
+    def on_telltime(self):
         print("[INTENT] Tell the time")
 
-    def on_telldate():
+    def on_telldate(self):
         print("[INTENT] Tell the date")
 
-    def on_playgame():
+    def on_playgame(self):
         print("[INTENT] Play a game")
 
-    def on_singrhyme():
+    def on_singrhyme(self):
         print("[INTENT] Sing a rhyme / poem")
 
-    def on_dance():
+    def on_dance(self):
         print("[INTENT] Dance")
 
-    def on_iloveyou():
+    def on_iloveyou(self):
         print("[INTENT] I love you")
 
-    def on_ihateyou():
+    def on_ihateyou(self):
         print("[INTENT] I hate you")
 
-    def on_what_is_your_name():
+    def on_what_is_your_name(self):
         print("[INTENT] What is your name")
 
-    def on_who_are_you():
+    def on_who_are_you(self):
         print("[INTENT] Who are you")
 
-    def on_how_are_you():
+    def on_how_are_you(self):
         print("[INTENT] How are you")
 
-    def on_count(number):
+    def on_count(self, number):
         print(f"[INTENT] Count to {number}")
 
-    def on_sayabc():
+    def on_sayabc(self):
         print("[INTENT] Say ABC")
 
-    def on_teachme():
+    def on_teachme(self):
         print("[INTENT] Teach me something")
 
-    def on_mouth(mouthState):
+    def on_mouth(self, mouthState):
         print(f"[INTENT] Mouth control: {mouthState}")
 
-    def on_tell_a_number():
+    def on_tell_a_number(self):
         print("[INTENT] Tell a number")
 
-    def on_are_you_hungry():
+    def on_are_you_hungry(self):
         print("[INTENT] Are you hungry?")
 
-    def on_move_ears():
+    def on_move_ears(self):
         print("[INTENT] Move ears")
 
-    def on_eyes(eyeState):
+    def on_eyes(self, eyeState):
         print(f"[INTENT] Eyes: {eyeState}")
 
-    def on_look(lookState):
+    def on_look(self, lookState):
         print(f"[INTENT] Look: {lookState}")
 
-    def on_hey_furby():
+    def on_hey_furby(self):
         print("[INTENT] Hey Furby")
 
-    def on_bye():
+    def on_bye(self):
         print("[INTENT] Bye")
 
-    def on_greeting(greetingState):
+    def on_greeting(self,greetingState):
         print(f"[INTENT] Greeting: {greetingState}")
 
-    def on_alarm(hour, minute, ampm):
+    def on_alarm(self, hour, minute, ampm):
         print(f"[INTENT] Alarm set for {hour}:{minute} {ampm}")
 
-    def on_playmusic():
+    def on_playmusic(self):
         print("[INTENT] Play music")
 
-    def on_tell_age():
+    def on_tell_age(self):
         print("[INTENT] Tell age")
 
-    def on_ok():
+    def on_ok(self):
         print("[INTENT] OK")
 
     def on_yes():
         print("[INTENT] YES")
 
-    def on_no():
+    def on_no(self):
         print("[INTENT] NO")
 
-    def on_cancel():
+    def on_cancel(self):
         print("[INTENT] CANCEL")
 
-    def on_remove_alarm(alarm):
+    def on_remove_alarm(self, alarm):
         print(f"[INTENT] Remove alarm {alarm}")
 
-    def on_tell_alarm():
+    def on_tell_alarm(self):
         print("[INTENT] Tell all alarms")
 
-    def on_friend():
+    def on_friend(self):
         print("[INTENT] Friend request")
 
-    def on_unknown_intent(intent):
+    def on_unknown_intent(self, intent):
         print(f"[ERROR] Unknown intent: {intent}")
     
 
